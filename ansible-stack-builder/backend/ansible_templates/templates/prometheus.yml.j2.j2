@@ -1,0 +1,33 @@
+<# prometheus.yml.j2 — Généré par Ansible Stack Builder #>
+# ============================================================================
+# Prometheus — Configuration de scraping
+# Managed by Ansible
+# ============================================================================
+global:
+  scrape_interval: {{ prometheus_scrape_interval }}
+  evaluation_interval: {{ prometheus_scrape_interval }}
+
+scrape_configs:
+  # Prometheus se scrape lui-même (toujours actif)
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+<% if enable_crowdsec %>
+  - job_name: 'crowdsec'
+    static_configs:
+      - targets: ['crowdsec:6060']
+
+<% endif %>
+<% if enable_traefik %>
+  - job_name: 'traefik'
+    static_configs:
+      - targets: ['traefik:8082']
+
+<% endif %>
+<% if enable_node_exporter %>
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+<% endif %>

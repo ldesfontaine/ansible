@@ -1,0 +1,98 @@
+<# README.md — Généré par Ansible Stack Builder #>
+# 🚀 << project_name >> — Stack générée par Ansible Stack Builder
+
+## Services activés
+
+<% for sid in enabled | sort %>
+- ✅ << sid >>
+<% endfor %>
+
+## Quickstart
+
+> **🔒 SÉCURITÉ — Avant de déployer :**
+> 1. Vérifiez que tous les secrets dans `group_vars/all.yml` ont été remplacés (pas de `CHANGE_ME`)
+> 2. Chiffrez le fichier de variables : `ansible-vault encrypt group_vars/all.yml`
+> 3. Ne commitez **jamais** ce fichier en clair dans un dépôt Git
+
+### 1. Configurer l'inventaire
+Éditer `inventory.ini` avec l'IP de votre serveur et l'utilisateur SSH.
+
+### 2. Personnaliser les variables
+Éditer `group_vars/all.yml` — **changer impérativement les secrets** (`CHANGE_ME`).
+
+```bash
+# Générer des secrets sécurisés :
+openssl rand -hex 16
+```
+
+### 3. Déployer
+
+```bash
+ansible-playbook -i inventory.ini setup.yml
+```
+
+### 4. C'est prêt !
+
+<% if enable_grafana or enable_vaultwarden or enable_uptime_kuma or enable_portainer or enable_bentopdf or enable_nextcloud or enable_n8n or enable_pihole or enable_adguard_home %>
+| Service | URL |
+|---------|-----|
+<% endif %>
+<% if enable_grafana %>
+| Grafana | `http(s)://{{ grafana_subdomain }}.{{ base_domain }}` |
+<% endif %>
+<% if enable_vaultwarden %>
+| Vaultwarden | `http(s)://{{ vaultwarden_subdomain }}.{{ base_domain }}` |
+<% endif %>
+<% if enable_uptime_kuma %>
+| Uptime Kuma | `http(s)://{{ uptime_kuma_subdomain }}.{{ base_domain }}` |
+<% endif %>
+<% if enable_portainer %>
+| Portainer | `http(s)://{{ portainer_subdomain }}.{{ base_domain }}` |
+<% endif %>
+<% if enable_bentopdf %>
+| BentoPDF | `http(s)://{{ bentopdf_subdomain }}.{{ base_domain }}` |
+<% endif %>
+<% if enable_nextcloud %>
+| Nextcloud | `http(s)://{{ nextcloud_subdomain }}.{{ base_domain }}` |
+<% endif %>
+<% if enable_n8n %>
+| n8n | `http(s)://{{ n8n_subdomain }}.{{ base_domain }}` |
+<% endif %>
+<% if enable_pihole %>
+| Pi-hole | `http(s)://{{ pihole_subdomain }}.{{ base_domain }}` |
+<% endif %>
+<% if enable_adguard_home %>
+| AdGuard Home | `http(s)://{{ adguard_subdomain }}.{{ base_domain }}` |
+<% endif %>
+
+<% if enable_docker %>
+## Commandes utiles
+
+```bash
+# Status de la stack
+cd << variables.get('stack_dir', '/opt/stack') >> && docker compose ps
+
+# Logs en temps réel
+cd << variables.get('stack_dir', '/opt/stack') >> && docker compose logs -f
+```
+<% endif %>
+
+<% if enable_crowdsec %>
+```bash
+# CrowdSec
+docker exec crowdsec cscli decisions list      # IPs bannies
+docker exec crowdsec cscli alerts list         # Alertes
+docker exec crowdsec cscli bouncers list       # Vérifier le bouncer
+```
+<% endif %>
+
+<% if enable_crowdsec_bouncer %>
+```bash
+# Bouncer nftables
+sudo nft list table crowdsec                   # Règles actives
+sudo systemctl status crowdsec-firewall-bouncer
+```
+<% endif %>
+
+---
+*Généré par [Ansible Stack Builder](https://github.com/)*

@@ -1,0 +1,53 @@
+<# tasks/stack.yml — Généré par Ansible Stack Builder #>
+# ============================================================================
+# Stack Docker — Création des répertoires, déploiement des configs, lancement
+# ============================================================================
+
+- name: Create stack directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    mode: '0755'
+  loop:
+    - "{{ stack_dir }}"
+<% if enable_grafana %>
+    - "{{ stack_dir }}/grafana/provisioning/datasources"
+<% endif %>
+<% if enable_traefik %>
+    - "{{ stack_dir }}/traefik/dynamic"
+<% endif %>
+
+<% if enable_traefik %>
+- name: Create letsencrypt directory (HTTPS only)
+  file:
+    path: "{{ stack_dir }}/traefik/letsencrypt"
+    state: directory
+    owner: "{{ ansible_user }}"
+    mode: '0755'
+  when: enable_https
+
+<% endif %>
+- name: Deploy Docker Compose & configs
+  template:
+    src: "templates/{{ item.src }}"
+    dest: "{{ stack_dir }}/{{ item.dest }}"
+  loop:
+    - { src: 'docker-compose.yml.j2', dest: 'docker-compose.yml' }
+<% if enable_traefik %>
+    - { src: 'traefik.yml.j2', dest: 'traefik.yml' }
+    - { src: 'traefik-dynamic.yml.j2', dest: 'traefik/dynamic/middlewares.yml' }
+<% endif %>
+<% if enable_crowdsec %>
+    - { src: 'acquis.yaml.j2', dest: 'acquis.yaml' }
+<% endif %>
+<% if enable_prometheus %>
+    - { src: 'prometheus.yml.j2', dest: 'prometheus.yml' }
+<% endif %>
+<% if enable_grafana %>
+    - { src: 'grafana-datasource.yml.j2', dest: 'grafana/provisioning/datasources/prometheus.yml' }
+<% endif %>
+  notify: Restart Stack
+
+- name: Pull and run stack
+  shell: "cd {{ stack_dir }} && docker compose pull && docker compose down --remove-orphans && docker compose up -d"

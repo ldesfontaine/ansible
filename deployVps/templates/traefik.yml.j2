@@ -1,0 +1,52 @@
+# ============================================================================
+# Traefik — Configuration statique
+# Managed by Ansible — ne pas modifier manuellement
+# Doc : https://doc.traefik.io/traefik/getting-started/configuration-overview/
+# ============================================================================
+
+# Dashboard désactivé — pas exposé sur Internet
+api:
+  dashboard: false
+
+# Healthcheck endpoint (utilisé par le healthcheck Docker)
+ping: {}
+
+# --- Points d'entrée (ports d'écoute) ---
+entryPoints:
+  web:
+    address: ":80"
+{% if enable_https %}
+    # Redirige tout HTTP → HTTPS automatiquement
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+  websecure:
+    address: ":443"
+{% endif %}
+  # Métriques internes — accessible uniquement via le réseau Docker
+  metrics:
+    address: ":8082"
+
+# --- Métriques Prometheus ---
+metrics:
+  prometheus:
+    entryPoint: metrics
+
+# --- Découverte automatique des containers ---
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false          # Seuls les containers avec "traefik.enable=true" sont routés
+
+{% if enable_https %}
+# --- Certificats HTTPS automatiques via Let's Encrypt ---
+certificatesResolvers:
+  myresolver:
+    acme:
+      email: {{ admin_email }}
+      storage: letsencrypt/acme.json
+      httpChallenge:
+        entryPoint: web
+{% endif %}

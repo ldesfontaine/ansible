@@ -1,0 +1,49 @@
+# ============================================================================
+# Stack Docker — Création des répertoires, déploiement des configs, lancement
+# Déploie : Traefik, CrowdSec, Prometheus, Grafana
+# Optionnel : BentoPDF, Node Exporter (selon variables)
+# ============================================================================
+
+# Arborescence sur le serveur :
+# /opt/stack/
+# ├── docker-compose.yml          (orchestration des containers)
+# ├── traefik.yml                 (config statique Traefik)
+# ├── acquis.yaml                 (sources de logs CrowdSec)
+# ├── prometheus.yml              (targets à scraper)
+# ├── grafana/provisioning/       (datasource Prometheus auto-configurée)
+# └── traefik/letsencrypt/        (certificats — uniquement en HTTPS)
+
+- name: Create stack directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    mode: '0755'
+  loop:
+    - "{{ stack_dir }}"
+    - "{{ stack_dir }}/grafana/provisioning/datasources"
+
+# Répertoire Let's Encrypt — uniquement en mode HTTPS (vrai domaine)
+- name: Create letsencrypt directory (HTTPS only)
+  file:
+    path: "{{ stack_dir }}/traefik/letsencrypt"
+    state: directory
+    owner: "{{ ansible_user }}"
+    mode: '0755'
+  when: enable_https
+
+# Rendu des templates Jinja2 → fichiers de config sur le serveur
+- name: Deploy Docker Compose & configs
+  template:
+    src: "templates/{{ item.src }}"
+    dest: "{{ stack_dir }}/{{ item.dest }}"
+  loop:
+    - { src: 'docker-compose.yml.j2', dest: 'docker-compose.yml' }
+    - { src: 'traefik.yml.j2', dest: 'traefik.yml' }
+    - { src: 'acquis.yaml.j2', dest: 'acquis.yaml' }
+    - { src: 'prometheus.yml.j2', dest: 'prometheus.yml' }
+    - { src: 'grafana-datasource.yml.j2', dest: 'grafana/provisioning/datasources/prometheus.yml' }
+
+# Pull les dernières images + redémarre les containers modifiés
+- name: Pull and run stack
+  shell: "cd {{ stack_dir }} && docker compose pull && docker compose down --remove-orphans && docker compose up -d"

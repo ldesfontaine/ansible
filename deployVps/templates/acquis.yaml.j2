@@ -1,0 +1,24 @@
+# ============================================================================
+# CrowdSec — Sources d'acquisition des logs
+# Managed by Ansible — ne pas modifier manuellement
+# Doc : https://docs.crowdsec.net/docs/data_sources/intro
+# ============================================================================
+---
+---
+# --- Logs des containers Docker ---
+# CrowdSec surveille tous les containers via le socket Docker
+# Détecte : attaques sur Traefik (HTTP flood, path traversal, CVE, etc.)
+source: docker
+container_name:
+  - "*"
+labels:
+  type: docker
+---
+# --- Logs système de l'hôte ---
+# Montés en read-only via /var/log dans le container
+# Détecte : bruteforce SSH, attaques sur PAM, sudo suspects
+filenames:
+  - /var/log/auth.log
+  - /var/log/syslog
+labels:
+  type: syslog

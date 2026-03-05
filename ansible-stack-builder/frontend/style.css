@@ -1,0 +1,607 @@
+/* ============================================================================
+   Ansible Stack Builder — CSS vanilla, thème clair Ninite, responsive
+   ============================================================================ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --bg: #f8f9fa;
+    --bg-card: #ffffff;
+    --bg-card-hover: #f0f4ff;
+    --bg-input: #ffffff;
+    --border: #dee2e6;
+    --border-active: #4f8cff;
+    --text: #212529;
+    --text-muted: #6c757d;
+    --accent: #4f8cff;
+    --accent-hover: #3a7bff;
+    --green: #198754;
+    --green-bg: #d1e7dd;
+    --orange: #e67e22;
+    --orange-bg: #fff3cd;
+    --red: #dc3545;
+    --red-light: #f8d7da;
+    --radius: 6px;
+    --shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+/* ── Header ── */
+header {
+    text-align: center;
+    padding: 2rem 1rem 1.2rem;
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+}
+
+header h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.subtitle {
+    color: var(--text-muted);
+    margin-top: 0.3rem;
+    font-size: 0.95rem;
+}
+
+/* ── Main ── */
+main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 4rem;
+}
+
+/* ── Section ── */
+.section {
+    margin-top: 1.5rem;
+}
+
+.section-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: var(--text);
+}
+
+.section.hidden {
+    display: none;
+}
+
+/* ── Loading ── */
+.loading {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+}
+
+/* ── Services Grid (Ninite-style) ── */
+.services-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+}
+
+.category {
+    flex: 1 1 280px;
+    min-width: 220px;
+}
+
+.category-header {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 2px solid var(--border);
+}
+
+.category-header h2 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.category-icon {
+    font-size: 1.1rem;
+}
+
+.category-services {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+/* ── Service Checkbox (simple Ninite-style) ── */
+.service-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3rem 0.4rem;
+    cursor: pointer;
+    user-select: none;
+    border-radius: 3px;
+    transition: background 0.1s;
+}
+
+.service-item:hover {
+    background: var(--bg-card-hover);
+}
+
+.service-item.locked {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.service-item input[type="checkbox"] {
+    accent-color: var(--accent);
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.service-item.locked input[type="checkbox"] {
+    cursor: not-allowed;
+}
+
+.service-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.service-label {
+    font-weight: 500;
+    font-size: 0.88rem;
+    color: var(--text);
+}
+
+.service-desc {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    line-height: 1.3;
+}
+
+.service-badge {
+    display: inline-block;
+    font-size: 0.6rem;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-left: 4px;
+    font-weight: 600;
+    vertical-align: middle;
+    text-transform: uppercase;
+}
+
+.badge-locked {
+    background: #e9ecef;
+    color: var(--text-muted);
+}
+
+.badge-auto {
+    background: var(--green-bg);
+    color: var(--green);
+}
+
+/* ── Warnings ── */
+.warnings {
+    margin-top: 1rem;
+    padding: 0.8rem 1rem;
+    border: 1px solid var(--orange);
+    border-radius: var(--radius);
+    background: var(--orange-bg);
+}
+
+.warnings.hidden {
+    display: none;
+}
+
+.warning-item {
+    color: #856404;
+    font-size: 0.85rem;
+    padding: 0.15rem 0;
+}
+
+/* ── Config Section ── */
+.config-group {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.2rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow);
+}
+
+.config-group--required {
+    border-left: 3px solid var(--orange);
+}
+
+.config-group--optional {
+    border-left: 3px solid var(--accent);
+}
+
+.config-group-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-bottom: 0.7rem;
+    color: var(--text);
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.config-group-title--collapsible {
+    cursor: pointer;
+    user-select: none;
+    justify-content: space-between;
+}
+
+.config-group-title--collapsible:hover {
+    color: var(--accent);
+}
+
+.config-group-icon {
+    font-size: 1rem;
+}
+
+.collapse-arrow {
+    margin-left: auto;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    transition: transform 0.15s;
+}
+
+/* Optional groups container */
+.optional-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    overflow: hidden;
+    transition: max-height 0.25s ease;
+}
+
+.optional-groups.collapsed {
+    display: none;
+}
+
+/* Service sub-group */
+.opt-service-group {
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) - 1px);
+    overflow: hidden;
+}
+
+.opt-service-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.45rem 0.8rem;
+    background: #f3f6ff;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--accent);
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid var(--border);
+    letter-spacing: 0.01em;
+}
+
+.opt-service-title:hover {
+    background: #e8eeff;
+}
+
+.collapse-arrow-sm {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.opt-service-fields {
+    padding: 0.7rem;
+    overflow: hidden;
+}
+
+.opt-service-fields.collapsed {
+    display: none;
+}
+
+.config-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 0.7rem;
+}
+
+.config-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.config-field label {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+}
+
+.config-field label .required-star {
+    color: var(--red);
+    margin-left: 2px;
+}
+
+/* Help icon tooltip */
+.field-help {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 15px;
+    height: 15px;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 50%;
+    font-size: 0.62rem;
+    font-weight: 700;
+    cursor: help;
+    flex-shrink: 0;
+    opacity: 0.75;
+    transition: opacity 0.15s;
+}
+
+.field-help:hover {
+    opacity: 1;
+}
+
+.config-field input[type="text"],
+.config-field input[type="email"],
+.config-field input[type="number"],
+.config-field input[type="password"],
+.config-field select {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.45rem 0.6rem;
+    color: var(--text);
+    font-size: 0.85rem;
+    font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+    transition: border-color 0.15s;
+    width: 100%;
+}
+
+.config-field select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%236c757d' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.6rem center;
+    padding-right: 2rem;
+    cursor: pointer;
+}
+
+.config-field input:focus,
+.config-field select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(79, 140, 255, 0.15);
+}
+
+.config-field input.field-error,
+.config-field select.field-error {
+    border-color: var(--red);
+    background: var(--red-light);
+}
+
+.config-field input.pwd-generated {
+    border-color: var(--green);
+    background: var(--green-bg);
+}
+
+.config-field input[type="checkbox"] {
+    accent-color: var(--accent);
+    width: 15px;
+    height: 15px;
+}
+
+.config-field .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    color: var(--text);
+    font-weight: 500;
+    cursor: pointer;
+}
+
+/* Password field — occupe toute la largeur d'une colonne */
+.config-field--password {
+    grid-column: span 1;
+}
+
+.pwd-input-row {
+    display: flex;
+    gap: 0.3rem;
+    align-items: stretch;
+}
+
+.pwd-input-row input[type="password"],
+.pwd-input-row input[type="text"] {
+    flex: 1;
+    min-width: 0;
+}
+
+.btn-toggle-pwd {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: #f8f9fa;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.12s;
+    padding: 0;
+}
+
+.btn-toggle-pwd:hover {
+    background: #e9ecef;
+    color: var(--text);
+}
+
+.btn-gen-pwd {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.3rem;
+    padding: 0.3rem 0.7rem;
+    border: 1px dashed var(--accent);
+    border-radius: 4px;
+    background: #f0f4ff;
+    color: var(--accent);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.12s, border-style 0.12s;
+    white-space: nowrap;
+    width: 100%;
+    justify-content: center;
+}
+
+.btn-gen-pwd:hover {
+    background: var(--accent);
+    color: #fff;
+    border-style: solid;
+}
+
+/* ── Versions ── */
+.version-toggle {
+    margin-bottom: 0.7rem;
+}
+
+.version-toggle label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    color: var(--text);
+}
+
+.version-toggle code {
+    background: #e8f0fe;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.8rem;
+    color: var(--accent);
+}
+
+.config-field.hidden {
+    display: none;
+}
+
+/* ── Generate Button ── */
+.generate-section {
+    margin-top: 2rem;
+    text-align: center;
+}
+
+.generate-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.85rem 2.5rem;
+    background: var(--green);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 1.05rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s, opacity 0.15s;
+    box-shadow: 0 2px 6px rgba(25, 135, 84, 0.25);
+}
+
+.generate-btn:hover:not(:disabled) {
+    background: #157347;
+    transform: translateY(-1px);
+}
+
+.generate-btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.generate-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background: #6c757d;
+    box-shadow: none;
+}
+
+.generate-btn.loading {
+    pointer-events: none;
+}
+
+.generate-status {
+    margin-top: 0.6rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.generate-status.error {
+    color: var(--red);
+}
+
+.generate-status.success {
+    color: var(--green);
+}
+
+/* ── Footer ── */
+footer {
+    text-align: center;
+    padding: 1.5rem;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    border-top: 1px solid var(--border);
+    background: #fff;
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+    header h1 {
+        font-size: 1.3rem;
+    }
+
+    .services-grid {
+        flex-direction: column;
+    }
+
+    .category {
+        flex: 1 1 100%;
+    }
+
+    .config-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .generate-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}

@@ -1,0 +1,47 @@
+<# Playbook principal — Généré par Ansible Stack Builder #>
+# ============================================================================
+# Playbook principal — Déploiement complet d'un serveur sécurisé
+# Généré par Ansible Stack Builder
+# Usage : ansible-playbook -i inventory.ini setup.yml
+# ============================================================================
+---
+- hosts: << variables.get('inventory_group', 'my_vps') >>
+  become: true
+  tasks:
+    # 1. Mise à jour système, outils de base, firewall UFW, mises à jour auto
+    - name: Système & Firewall
+      include_tasks: tasks/system.yml
+
+<% if enable_ssh_hardening %>
+    # 2. Durcissement SSH (clé only, ciphers modernes) + paramètres kernel
+    - name: Hardening SSH & Kernel
+      include_tasks: tasks/hardening.yml
+
+<% endif %>
+<% if enable_docker %>
+    # 3. Installation Docker Engine depuis le dépôt officiel (dernière stable)
+    - name: Docker Engine
+      include_tasks: tasks/docker.yml
+
+<% endif %>
+<% if enable_netbird %>
+    # 4. VPN NetBird — réseau mesh sécurisé
+    - name: VPN NetBird
+      include_tasks: tasks/netbird.yml
+      when: enable_netbird
+
+<% endif %>
+<% if docker_services %>
+    # 5. Déploiement de la stack Docker
+    - name: Déploiement Stack
+      include_tasks: tasks/stack.yml
+
+<% endif %>
+<% if enable_crowdsec_bouncer %>
+    # 6. Bouncer CrowdSec sur l'hôte — bloque les IPs au niveau nftables
+    - name: CrowdSec Firewall Bouncer (nftables)
+      include_tasks: tasks/crowdsec-bouncer.yml
+
+<% endif %>
+  handlers:
+    - import_tasks: handlers/main.yml

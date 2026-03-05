@@ -1,0 +1,60 @@
+# ============================================================================
+# Docker Engine — Installation depuis le dépôt officiel Docker
+# Garantit la dernière version stable + mises à jour via unattended-upgrades
+# Doc : https://docs.docker.com/engine/install/
+# ============================================================================
+
+- name: Install Docker prerequisites
+  apt:
+    name: [ca-certificates, curl, gnupg]
+    state: present
+
+# Répertoire pour stocker les clés GPG des dépôts tiers
+- name: Create keyrings directory
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+# Clé GPG du dépôt officiel Docker
+- name: Add Docker GPG key
+  shell: |
+    curl -fsSL https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg | \
+    gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+  args:
+    creates: /etc/apt/keyrings/docker.gpg
+
+# Dépôt APT officiel Docker — détecte automatiquement l'architecture (amd64/arm64)
+- name: Add Docker repository
+  copy:
+    content: |
+      deb [arch={{ ansible_architecture | replace('x86_64','amd64') | replace('aarch64','arm64') }} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} stable
+    dest: /etc/apt/sources.list.d/docker.list
+    mode: '0644'
+
+- name: Update apt cache after adding Docker repo
+  apt:
+    update_cache: yes
+
+# state: latest → chaque run du playbook vérifie qu'on a la dernière version
+- name: Install Docker Engine (latest stable)
+  apt:
+    name:
+      - docker-ce                 # Docker Engine
+      - docker-ce-cli             # CLI docker
+      - containerd.io             # Runtime de containers
+      - docker-compose-plugin     # docker compose (v2)
+    state: latest
+
+- name: Ensure Docker is started and enabled
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+
+# Permet à l'utilisateur de lancer des commandes docker sans sudo
+- name: Add user "{{ ansible_user }}" to docker group
+  user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: yes

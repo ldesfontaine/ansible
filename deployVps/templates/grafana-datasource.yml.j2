@@ -1,0 +1,14 @@
+# ============================================================================
+# Grafana — Provisioning automatique de la datasource Prometheus
+# Grafana charge ce fichier au démarrage → pas de config manuelle nécessaire
+# Doc : https://grafana.com/docs/grafana/latest/administration/provisioning/
+# ============================================================================
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy                  # Grafana requête Prometheus côté serveur
+    url: http://prometheus:9090    # Nom DNS Docker du container Prometheus
+    isDefault: true
+    editable: true

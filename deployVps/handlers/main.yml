@@ -1,0 +1,24 @@
+---
+# Handlers — Actions déclenchées par "notify" dans les tasks
+# Un handler ne s'exécute qu'une fois, à la fin du playbook, si notifié
+# ============================================================================
+# Redémarre le bouncer nftables quand sa config change
+- name: Restart Bouncer
+  systemd:
+    name: crowdsec-firewall-bouncer
+    state: restarted
+
+# Relance les containers modifiés
+- name: Restart Stack
+  shell: "cd {{ stack_dir }} && docker compose up -d"
+
+# Redémarre SSH quand sshd_config change
+# ⚠️ Validé par 'sshd -t' AVANT le redémarrage (dans la task)
+- name: Restart SSH
+  systemd:
+    name: sshd
+    state: restarted
+
+# Recharge les paramètres kernel (sysctl)
+- name: Apply sysctl
+  shell: sysctl --system

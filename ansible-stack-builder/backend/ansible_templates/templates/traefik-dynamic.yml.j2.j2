@@ -1,0 +1,23 @@
+<# traefik-dynamic.yml.j2 — Généré par Ansible Stack Builder #>
+# ============================================================================
+# Traefik — Configuration dynamique (security headers)
+# Managed by Ansible
+# ============================================================================
+http:
+  middlewares:
+    security-headers:
+      headers:
+        # Protection contre le clickjacking
+        frameDeny: true
+        # Protection XSS du navigateur
+        browserXssFilter: true
+        # Empêche le MIME sniffing
+        contentTypeNosniff: true
+        # Force HTTPS pendant 1 an (inclut les sous-domaines)
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        # Politique de referrer restrictive
+        referrerPolicy: "strict-origin-when-cross-origin"
+        # Permissions Policy restrictive
+        permissionsPolicy: "camera=(), microphone=(), geolocation=(), payment=()"

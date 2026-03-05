@@ -1,0 +1,64 @@
+<# acquis.yaml.j2 — Généré par Ansible Stack Builder #>
+# ============================================================================
+# CrowdSec — Sources d'acquisition des logs
+# Managed by Ansible
+# ============================================================================
+---
+# --- Logs des containers Docker ---
+source: docker
+container_name:
+  - "*"
+labels:
+  type: docker
+<% if enable_traefik %>
+---
+# --- Logs Traefik (parseur dédié) ---
+source: docker
+container_name:
+  - "traefik"
+labels:
+  type: traefik
+<% endif %>
+<% if enable_nextcloud %>
+---
+# --- Logs Nextcloud ---
+source: docker
+container_name:
+  - "nextcloud"
+labels:
+  type: nextcloud
+<% endif %>
+<% if enable_pihole %>
+---
+# --- Logs Pi-hole ---
+source: docker
+container_name:
+  - "pihole"
+labels:
+  type: syslog
+<% endif %>
+<% if enable_n8n %>
+---
+# --- Logs n8n ---
+source: docker
+container_name:
+  - "n8n"
+labels:
+  type: syslog
+<% endif %>
+<% if enable_adguard_home %>
+---
+# --- Logs AdGuard Home ---
+source: docker
+container_name:
+  - "adguard-home"
+labels:
+  type: syslog
+<% endif %>
+---
+# --- Logs système de l'hôte ---
+filenames:
+  - /var/log/auth.log
+  - /var/log/syslog
+labels:
+  type: syslog

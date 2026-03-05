@@ -1,0 +1,27 @@
+# ============================================================================
+# Docker Compose — Ansible Stack Builder
+# Déploiement sur VPS
+# ⚠️ En production : placer derrière un reverse proxy (Traefik/Nginx) avec HTTPS
+# ============================================================================
+services:
+  app:
+    build: .
+    container_name: ansible-stack-builder
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8000"
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      # Origines autorisées pour CORS (vide = même origine uniquement)
+      # Ex: "https://builder.example.com" pour un domaine spécifique
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-}
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/services')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

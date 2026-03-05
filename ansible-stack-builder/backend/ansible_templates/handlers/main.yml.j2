@@ -1,0 +1,27 @@
+<# Handlers — Généré par Ansible Stack Builder #>
+---
+# Handlers — Actions déclenchées par "notify" dans les tasks
+# ============================================================================
+<% if enable_crowdsec_bouncer %>
+- name: Restart Bouncer
+  systemd:
+    name: crowdsec-firewall-bouncer
+    state: restarted
+
+<% endif %>
+<% if docker_services %>
+- name: Restart Stack
+  shell: "cd {{ stack_dir }} && docker compose up -d"
+
+<% endif %>
+<% if enable_ssh_hardening %>
+- name: Restart SSH
+  systemd:
+    name: sshd
+    state: restarted
+
+- name: Apply sysctl
+  shell: sysctl --system
+
+<% endif %>
+

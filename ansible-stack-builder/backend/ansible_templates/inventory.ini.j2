@@ -1,0 +1,4 @@
+<# Inventory — Généré par Ansible Stack Builder #>
+# Inventory — Machine(s) cible(s)
+[<< variables.get('inventory_group', 'my_vps') >>]
+<< variables.get('ansible_host', 'CHANGE_ME') >> ansible_user=<< variables.get('ansible_user', 'deploy') >> ansible_python_interpreter=/usr/bin/python3

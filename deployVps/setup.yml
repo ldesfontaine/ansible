@@ -1,0 +1,35 @@
+# ============================================================================
+# Playbook principal — Déploiement complet d'un serveur sécurisé
+# Usage : ansible-playbook -i inventory.ini setup.yml
+# ============================================================================
+---
+- hosts: my_vps
+  become: true
+  tasks:
+    # 1. Mise à jour système, outils de base, firewall UFW, mises à jour auto
+    - name: Système & Firewall
+      include_tasks: tasks/system.yml
+
+    # 2. Durcissement SSH (clé only, ciphers modernes) + paramètres kernel
+    - name: Hardening SSH & Kernel
+      include_tasks: tasks/hardening.yml
+
+    # 3. Installation Docker Engine depuis le dépôt officiel (dernière stable)
+    - name: Docker Engine
+      include_tasks: tasks/docker.yml
+
+    # 4. VPN NetBird (optionnel) — réseau mesh sécurisé
+    - name: VPN NetBird
+      include_tasks: tasks/netbird.yml
+      when: enable_netbird
+
+    # 5. Déploiement de la stack : Traefik, CrowdSec, Prometheus, Grafana, apps
+    - name: Déploiement Stack
+      include_tasks: tasks/stack.yml
+
+    # 6. Bouncer CrowdSec sur l'hôte — bloque les IPs au niveau nftables
+    - name: CrowdSec Firewall Bouncer (nftables)
+      include_tasks: tasks/crowdsec-bouncer.yml
+
+  handlers:
+    - import_tasks: handlers/main.yml

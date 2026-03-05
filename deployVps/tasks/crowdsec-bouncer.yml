@@ -1,0 +1,55 @@
+# ============================================================================
+# CrowdSec Firewall Bouncer — Installé sur l'HÔTE (pas dans Docker)
+#
+# Fonctionnement :
+#   1. Le bouncer interroge la LAPI CrowdSec (dans Docker) toutes les 10s
+#   2. Il récupère les décisions (IPs à bannir)
+#   3. Il injecte des règles DROP dans nftables → blocage au niveau kernel
+#
+# Pourquoi sur l'hôte ? Parce qu'il doit manipuler nftables du kernel.
+# Un container n'y a pas accès (sauf en mode privileged = faille de sécurité).
+# ============================================================================
+
+# --- Installation depuis le dépôt officiel CrowdSec ---
+# Le script officiel configure lui-même le dépôt APT ET sa clé GPG
+- name: Add CrowdSec repository
+  shell: "curl -s https://install.crowdsec.net/install.sh | sh"
+  args:
+    creates: /etc/apt/sources.list.d/crowdsec_crowdsec.list
+
+- name: Update apt cache for CrowdSec
+  apt:
+    update_cache: yes
+
+# nftables (pas iptables) — plus moderne, requis par les kernels récents
+- name: Install CrowdSec Firewall Bouncer (nftables)
+  apt:
+    name: crowdsec-firewall-bouncer-nftables
+    state: latest
+
+# --- Configuration ---
+# Attend que la LAPI CrowdSec (dans Docker) soit prête avant de configurer
+- name: Wait for CrowdSec LAPI to be available
+  wait_for:
+    host: 127.0.0.1
+    port: 8080
+    timeout: 60
+    delay: 5
+
+# Déploie la config du bouncer (api_url, api_key, mode nftables)
+# mode: 0600 car le fichier contient la clé API
+- name: Deploy bouncer configuration
+  template:
+    src: templates/crowdsec-firewall-bouncer.yaml.j2
+    dest: /etc/crowdsec/bouncers/crowdsec-firewall-bouncer.yaml
+    owner: root
+    group: root
+    mode: '0600'
+  notify: Restart Bouncer
+
+- name: Enable and start CrowdSec Firewall Bouncer
+  systemd:
+    name: crowdsec-firewall-bouncer
+    state: started
+    enabled: yes
+

@@ -1,0 +1,189 @@
+# ============================================================================
+# Docker Compose Stack — Managed by Ansible
+# ⚠️ Ne pas modifier manuellement — relancer le playbook pour tout changement
+# ============================================================================
+services:
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Traefik — Reverse proxy & load balancer
+  # Route le trafic HTTP(S) vers les containers via les labels Docker
+  # Doc : https://doc.traefik.io/traefik/
+  # ─────────────────────────────────────────────────────────────────────────
+  traefik:
+    image: traefik:v{{ traefik_version }}
+    container_name: traefik
+    restart: unless-stopped
+    ports:
+      - "80:80"
+{% if enable_https %}
+      - "443:443"
+{% endif %}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro   # Découverte auto des containers
+      - ./traefik.yml:/traefik.yml:ro                  # Config statique Traefik
+{% if enable_https %}
+      - ./traefik/letsencrypt:/letsencrypt              # Certificats Let's Encrypt
+{% endif %}
+    networks:
+      - web
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # CrowdSec — Détection d'intrusions (LAPI + agent)
+  # Lit les logs, détecte les attaques, crée des décisions de ban
+  # Le bouncer nftables (sur l'hôte) récupère ces décisions et bloque les IPs
+  # Doc : https://docs.crowdsec.net/
+  # ─────────────────────────────────────────────────────────────────────────
+  crowdsec:
+    image: crowdsecurity/crowdsec:{{ crowdsec_version }}
+    container_name: crowdsec
+    restart: unless-stopped
+    environment:
+      # Collections de scénarios de détection
+      COLLECTIONS: "crowdsecurity/linux crowdsecurity/traefik crowdsecurity/sshd crowdsecurity/http-cve"
+      # Clé API pour le bouncer — doit correspondre à celle dans le bouncer config
+      BOUNCER_KEY_firewall: "{{ crowdsec_lapi_key }}"
+    volumes:
+      - crowdsec_config:/etc/crowdsec               # Config persistée (auto-générée au 1er boot)
+      - crowdsec_data:/var/lib/crowdsec/data         # Base de données des décisions
+      - /var/run/docker.sock:/var/run/docker.sock:ro # Socket Docker pour lire les logs containers
+      - /var/log:/var/log:ro                         # Logs de l'hôte (auth.log, syslog)
+      - ./acquis.yaml:/etc/crowdsec/acquis.yaml:ro   # Sources de logs à surveiller
+    ports:
+      - "127.0.0.1:8080:8080"                       # LAPI — uniquement accessible en local
+      - "127.0.0.1:6060:6060"                        # Métriques Prometheus
+    networks:
+      - web
+    healthcheck:
+      test: ["CMD", "cscli", "version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Prometheus — Collecte de métriques
+  # Scrape les métriques CrowdSec, Traefik et node-exporter
+  # Doc : https://prometheus.io/
+  # ─────────────────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:{{ prometheus_version }}
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=30d'          # Garde 30 jours de métriques
+      - '--storage.tsdb.retention.size=1GB'           # Max 1GB sur disque
+    networks:
+      - web
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+{% if enable_bentopdf %}
+  # ─────────────────────────────────────────────────────────────────────────
+  # BentoPDF — Application exemple
+  # Accessible via {{ bentopdf_subdomain }}.<base_domain>
+  # ─────────────────────────────────────────────────────────────────────────
+  bentopdf:
+    image: ghcr.io/alam00000/bentopdf-simple:latest
+    container_name: bentopdf
+    restart: unless-stopped
+    networks:
+      - web
+    labels:
+      - "traefik.enable=true"
+{% if enable_https %}
+      - "traefik.http.routers.bento.rule=Host(`{{ bentopdf_subdomain }}.{{ base_domain }}`)"
+      - "traefik.http.routers.bento.entrypoints=websecure"
+      - "traefik.http.routers.bento.tls.certresolver=myresolver"
+{% else %}
+      - "traefik.http.routers.bento.rule=Host(`{{ bentopdf_subdomain }}.{{ base_domain }}`)"
+      - "traefik.http.routers.bento.entrypoints=web"
+{% endif %}
+      - "traefik.http.services.bento.loadbalancer.server.port=8080"
+{% endif %}
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Grafana — Dashboards & visualisation
+  # Accessible via {{ grafana_subdomain }}.<base_domain>
+  # Datasource Prometheus auto-configurée via provisioning
+  # Doc : https://grafana.com/docs/
+  # ─────────────────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:{{ grafana_version }}
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD={{ grafana_admin_password }}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - web
+    labels:
+      - "traefik.enable=true"
+{% if enable_https %}
+      - "traefik.http.routers.grafana.rule=Host(`{{ grafana_subdomain }}.{{ base_domain }}`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls.certresolver=myresolver"
+{% else %}
+      - "traefik.http.routers.grafana.rule=Host(`{{ grafana_subdomain }}.{{ base_domain }}`)"
+      - "traefik.http.routers.grafana.entrypoints=web"
+{% endif %}
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+{% if enable_node_exporter %}
+  # ─────────────────────────────────────────────────────────────────────────
+  # Node Exporter — Métriques système de l'hôte (CPU, RAM, disque, réseau)
+  # Exposé uniquement sur le réseau Docker interne (pas de port publié)
+  # Doc : https://github.com/prometheus/node_exporter
+  # ─────────────────────────────────────────────────────────────────────────
+  node-exporter:
+    image: prom/node-exporter:{{ node_exporter_version }}
+    container_name: node-exporter
+    restart: unless-stopped
+    pid: host
+    command:
+      - '--path.rootfs=/host'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host:ro,rslave
+    networks:
+      - web
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9100/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+{% endif %}
+
+# ─────────────────────────────────────────────────────────────────────────
+# Réseau partagé — tous les containers communiquent via ce bridge
+# ─────────────────────────────────────────────────────────────────────────
+networks:
+  web:
+    driver: bridge
+
+# ─────────────────────────────────────────────────────────────────────────
+# Volumes persistants — survivent aux docker compose down
+# ─────────────────────────────────────────────────────────────────────────
+volumes:
+  crowdsec_config:    # Config CrowdSec (auto-générée au premier boot)
+  crowdsec_data:      # DB des décisions CrowdSec
+  grafana_data:       # Dashboards, users, préférences Grafana
+  prometheus_data:    # Métriques collectées

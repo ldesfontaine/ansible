@@ -1,0 +1,14 @@
+{
+  "traefik": "3.4",
+  "crowdsec": "v1.6.8",
+  "grafana": "11.5.2",
+  "prometheus": "v3.2.1",
+  "node_exporter": "v1.9.0",
+  "vaultwarden": "1.32.7",
+  "uptime_kuma": "1",
+  "portainer": "2.25.1-alpine",
+  "nextcloud": "29",
+  "n8n": "1.77.0",
+  "pihole": "2025.02.1",
+  "adguard_home": "v0.107.46"
+}

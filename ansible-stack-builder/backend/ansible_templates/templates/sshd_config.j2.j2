@@ -1,0 +1,41 @@
+<# sshd_config.j2 — Généré par Ansible Stack Builder #>
+# ============================================================================
+# SSH Hardened Configuration — Managed by Ansible
+# ============================================================================
+
+Port {{ ssh_port }}
+AddressFamily any
+ListenAddress 0.0.0.0
+ListenAddress ::
+
+PermitRootLogin no
+MaxAuthTries {{ ssh_max_auth_tries }}
+MaxSessions {{ ssh_max_sessions }}
+PubkeyAuthentication yes
+PasswordAuthentication no
+PermitEmptyPasswords no
+KbdInteractiveAuthentication no
+UsePAM yes
+AuthenticationMethods publickey
+
+AllowUsers {{ ansible_user }}
+
+LoginGraceTime 30
+ClientAliveInterval {{ ssh_client_alive_interval }}
+ClientAliveCountMax {{ ssh_client_alive_count_max }}
+
+X11Forwarding no
+PrintMotd no
+PermitUserEnvironment no
+AllowAgentForwarding yes
+AllowTcpForwarding no
+PermitTunnel no
+
+SyslogFacility AUTH
+LogLevel VERBOSE
+
+Subsystem sftp /usr/lib/openssh/sftp-server
+
+KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org
+Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com
+MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com

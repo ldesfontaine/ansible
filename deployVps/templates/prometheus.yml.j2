@@ -1,0 +1,30 @@
+# ============================================================================
+# Prometheus — Configuration de scraping
+# Managed by Ansible — ne pas modifier manuellement
+# Doc : https://prometheus.io/docs/prometheus/latest/configuration/
+# ============================================================================
+global:
+  scrape_interval: 15s             # Collecte les métriques toutes les 15s
+  evaluation_interval: 15s         # Évalue les règles d'alerte toutes les 15s
+
+scrape_configs:
+  # CrowdSec expose ses métriques nativement sur le port 6060
+  # Métriques disponibles : décisions actives, alertes, parsers, scénarios
+  - job_name: 'crowdsec'
+    static_configs:
+      - targets: ['crowdsec:6060']
+
+  # Traefik expose ses métriques via l'entrypoint dédié (port 8082)
+  # Métriques : requêtes HTTP, latence, codes de réponse, TLS, etc.
+  - job_name: 'traefik'
+    static_configs:
+      - targets: ['traefik:8082']
+
+{% if enable_node_exporter %}
+  # Node Exporter — métriques système de l'hôte
+  # Métriques : CPU, RAM, disque, réseau, load, filesystem, etc.
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+{% endif %}
+

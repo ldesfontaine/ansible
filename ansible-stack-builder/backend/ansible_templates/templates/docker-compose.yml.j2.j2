@@ -1,0 +1,498 @@
+<# docker-compose.yml.j2 — Généré par Ansible Stack Builder #>
+# ============================================================================
+# Docker Compose Stack — Managed by Ansible
+# ⚠️ Ne pas modifier manuellement — relancer le playbook pour tout changement
+# ============================================================================
+services:
+
+<% if enable_traefik %>
+  # ── Traefik — Reverse proxy & load balancer ──
+  traefik:
+    image: traefik:v{{ traefik_version }}
+    container_name: traefik
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "80:80"
+{% if enable_https %}
+      - "443:443"
+{% endif %}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik.yml:/traefik.yml:ro
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
+{% if enable_https %}
+      - ./traefik/letsencrypt:/letsencrypt
+{% endif %}
+    networks:
+      - << variables.get('docker_network', 'web') >>
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+<% endif %>
+<% if enable_crowdsec %>
+  # ── CrowdSec — Détection d'intrusions ──
+  crowdsec:
+    image: crowdsecurity/crowdsec:{{ crowdsec_version }}
+    container_name: crowdsec
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      COLLECTIONS: "crowdsecurity/linux crowdsecurity/sshd crowdsecurity/http-cve<% if enable_traefik %> crowdsecurity/traefik<% endif %><% if enable_nextcloud %> crowdsecurity/nextcloud<% endif %><% if enable_pihole %> crowdsecurity/pgsql<% endif %><% if enable_n8n %> crowdsecurity/base-http-scenarios<% endif %>"
+      BOUNCER_KEY_firewall: "{{ crowdsec_lapi_key }}"
+    volumes:
+      - crowdsec_config:/etc/crowdsec
+      - crowdsec_data:/var/lib/crowdsec/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/log:/var/log:ro
+      - ./acquis.yaml:/etc/crowdsec/acquis.yaml:ro
+    ports:
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:6060:6060"
+    networks:
+      - << variables.get('docker_network', 'web') >>
+    healthcheck:
+      test: ["CMD", "cscli", "version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+<% endif %>
+<% if enable_prometheus %>
+  # ── Prometheus — Collecte de métriques ──
+  prometheus:
+    image: prom/prometheus:{{ prometheus_version }}
+    container_name: prometheus
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time={{ prometheus_retention }}'
+      - '--storage.tsdb.retention.size={{ prometheus_retention_size }}'
+    networks:
+      - << variables.get('docker_network', 'web') >>
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+<% endif %>
+<% if enable_grafana %>
+  # ── Grafana — Dashboards & visualisation ──
+  grafana:
+    image: grafana/grafana:{{ grafana_version }}
+    container_name: grafana
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD={{ grafana_admin_password }}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - << variables.get('docker_network', 'web') >>
+<% if enable_traefik %>
+    labels:
+      - "traefik.enable=true"
+{% if enable_https %}
+      - "traefik.http.routers.grafana.rule=Host(`{{ grafana_subdomain }}.{{ base_domain }}`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls.certresolver=myresolver"
+{% else %}
+      - "traefik.http.routers.grafana.rule=Host(`{{ grafana_subdomain }}.{{ base_domain }}`)"
+      - "traefik.http.routers.grafana.entrypoints=web"
+{% endif %}
+<% else %>
+    ports:
+      - "127.0.0.1:3000:3000"
+<% endif %>
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+<% endif %>
+<% if enable_node_exporter %>
+  # ── Node Exporter — Métriques système ──
+  node-exporter:
+    image: prom/node-exporter:{{ node_exporter_version }}
+    container_name: node-exporter
+    restart: unless-stopped
+    read_only: true
+    pid: host
+    command:
+      - '--path.rootfs=/host'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host:ro,rslave
+    networks:
+      - << variables.get('docker_network', 'web') >>
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9100/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+<% endif %>
+<% if enable_vaultwarden %>
+  # ── Vaultwarden — Gestionnaire de mots de passe ──
+  vaultwarden:
+    image: vaultwarden/server:{{ vaultwarden_version }}
+    container_name: vaultwarden
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - SIGNUPS_ALLOWED={{ vaultwarden_signups_allowed }}
+{% if enable_https %}
+      - DOMAIN=https://{{ vaultwarden_subdomain }}.{{ base_domain }}
+{% else %}
+      - DOMAIN=http://{{ vaultwarden_subdomain }}.{{ base_domain }}
+{% endif %}
+    volumes:
+      - vaultwarden_data:/data
+    networks:
+      - << variables.get('docker_network', 'web') >>
+<% if enable_traefik %>
+    labels:
+      - "traefik.enable=true"
+{% if enable_https %}
+      - "traefik.http.routers.vaultwarden.rule=Host(`{{ vaultwarden_subdomain }}.{{ base_domain }}`)"
+      - "traefik.http.routers.vaultwarden.entrypoints=websecure"
+      - "traefik.http.routers.vaultwarden.tls.certresolver=myresolver"
+{% else %}
+      - "traefik.http.routers.vaultwarden.rule=Host(`{{ vaultwarden_subdomain }}.{{ base_domain }}`)"
+      - "traefik.http.routers.vaultwarden.entrypoints=web"
+{% endif %}
+      - "traefik.http.services.vaultwarden.loadbalancer.server.port=80"
+<% endif %>
+
+<% endif %>
+<% if enable_uptime_kuma %>
+  # ── Uptime Kuma — Monitoring d'uptime ──
+  uptime-kuma:
+    image: louislam/uptime-kuma:{{ uptime_kuma_version }}
+    container_name: uptime-kuma
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - uptime_kuma_data:/app/data
+    networks:
+      - << variables.get('docker_network', 'web') >>
+<% if enable_traefik %>
+    labels:
+      - "traefik.enable=true"
+{% if enable_https %}
+      - "traefik.http.routers.uptime-kuma.rule=Host(`{{ uptime_kuma_subdomain }}.{{ base_domain }}`)"
+      - "traefik.http.routers.uptime-kuma.entrypoints=websecure"
+      - "traefik.http.routers.uptime-kuma.tls.certresolver=myresolver"
+{% else %}
+      - "traefik.http.routers.uptime-kuma.rule=Host(`{{ uptime_kuma_subdomain }}.{{ base_domain }}`)"
+      - "traefik.http.routers.uptime-kuma.entrypoints=web"
+{% endif %}
+      - "traefik.http.services.uptime-kuma.loadbalancer.server.port=3001"
+<% endif %>
+
+<% endif %>
+<% if enable_portainer %>
+  # ── Portainer — Interface de gestion Docker ──
+  # ⚠️ Portainer nécessite l'accès au socket Docker — accès en lecture seule
+  # Pour une sécurité renforcée, envisagez docker-socket-proxy (tecnativa/docker-socket-proxy)
+  portainer:
+    image: portainer/portainer-ce:{{ portainer_version }}
+    container_name: portainer
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - portainer_data:/data
+    networks:
+      - << variables.get('docker_network', 'web') >>
+<% if enable_traefik %>
+    labels:
+      - "traefik.enable=true"
+{% if enable_https %}
+      - "traefik.http.routers.portainer.rule=Host(`{{ portainer_subdomain }}.{{ base_domain }}`)"
+      - "traefik.http.routers.portainer.entrypoints=websecure"
+      - "traefik.http.routers.portainer.tls.certresolver=myresolver"
+{% else %}
+      - "traefik.http.routers.portainer.rule=Host(`{{ portainer_subdomain }}.{{ base_domain }}`)"
+      - "traefik.http.routers.portainer.entrypoints=web"
+{% endif %}
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+<% endif %>
+
+<% endif %>
+<% if enable_bentopdf %>
+  # ── BentoPDF — Convertisseur PDF ──
+  bentopdf:
+    image: ghcr.io/alam00000/bentopdf-simple:latest
+    container_name: bentopdf
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - << variables.get('docker_network', 'web') >>
+<% if enable_traefik %>
+    labels:
+      - "traefik.enable=true"
+{% if enable_https %}
+      - "traefik.http.routers.bento.rule=Host(`{{ bentopdf_subdomain }}.{{ base_domain }}`)"
+      - "traefik.http.routers.bento.entrypoints=websecure"
+      - "traefik.http.routers.bento.tls.certresolver=myresolver"
+{% else %}
+      - "traefik.http.routers.bento.rule=Host(`{{ bentopdf_subdomain }}.{{ base_domain }}`)"
+      - "traefik.http.routers.bento.entrypoints=web"
+{% endif %}
+      - "traefik.http.services.bento.loadbalancer.server.port=8080"
+<% endif %>
+
+
+<% endif %>
+<% if enable_nextcloud %>
+  # ── Nextcloud — Cloud privé ──
+  nextcloud:
+    image: nextcloud:{{ nextcloud_version }}
+    container_name: nextcloud
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - MYSQL_HOST=nextcloud-db
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - MYSQL_PASSWORD={{ nextcloud_db_password }}
+      - NEXTCLOUD_ADMIN_USER={{ nextcloud_admin_user }}
+      - NEXTCLOUD_ADMIN_PASSWORD={{ nextcloud_admin_password }}
+{% if enable_https %}
+      - OVERWRITEPROTOCOL=https
+{% endif %}
+      - NEXTCLOUD_TRUSTED_DOMAINS={{ nextcloud_subdomain }}.{{ base_domain }}
+    volumes:
+      - nextcloud_data:/var/www/html
+    depends_on:
+      nextcloud-db:
+        condition: service_healthy
+    networks:
+      - << variables.get('docker_network', 'web') >>
+<% if enable_traefik %>
+    labels:
+      - "traefik.enable=true"
+{% if enable_https %}
+      - "traefik.http.routers.nextcloud.rule=Host(`{{ nextcloud_subdomain }}.{{ base_domain }}`)"
+      - "traefik.http.routers.nextcloud.entrypoints=websecure"
+      - "traefik.http.routers.nextcloud.tls.certresolver=myresolver"
+{% else %}
+      - "traefik.http.routers.nextcloud.rule=Host(`{{ nextcloud_subdomain }}.{{ base_domain }}`)"
+      - "traefik.http.routers.nextcloud.entrypoints=web"
+{% endif %}
+      - "traefik.http.services.nextcloud.loadbalancer.server.port=80"
+      - "traefik.http.middlewares.nextcloud-redirectregex.redirectregex.permanent=true"
+      - "traefik.http.middlewares.nextcloud-redirectregex.redirectregex.regex=https://(.*)/.well-known/(card|cal)dav"
+      - "traefik.http.middlewares.nextcloud-redirectregex.redirectregex.replacement=https://$${1}/remote.php/dav/"
+      - "traefik.http.routers.nextcloud.middlewares=nextcloud-redirectregex"
+<% endif %>
+
+  # ── Nextcloud DB — MariaDB ──
+  nextcloud-db:
+    image: mariadb:11
+    container_name: nextcloud-db
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - MYSQL_ROOT_PASSWORD={{ nextcloud_db_root_password }}
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - MYSQL_PASSWORD={{ nextcloud_db_password }}
+    volumes:
+      - nextcloud_db_data:/var/lib/mysql
+    networks:
+      - << variables.get('docker_network', 'web') >>
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+<% endif %>
+<% if enable_n8n %>
+  # ── n8n — Automatisation de workflows ──
+  n8n:
+    image: n8nio/n8n:{{ n8n_version }}
+    container_name: n8n
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER={{ n8n_basic_auth_user }}
+      - N8N_BASIC_AUTH_PASSWORD={{ n8n_basic_auth_password }}
+{% if enable_https %}
+      - N8N_PROTOCOL=https
+      - WEBHOOK_URL=https://{{ n8n_subdomain }}.{{ base_domain }}/
+{% else %}
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://{{ n8n_subdomain }}.{{ base_domain }}/
+{% endif %}
+      - N8N_HOST={{ n8n_subdomain }}.{{ base_domain }}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - << variables.get('docker_network', 'web') >>
+<% if enable_traefik %>
+    labels:
+      - "traefik.enable=true"
+{% if enable_https %}
+      - "traefik.http.routers.n8n.rule=Host(`{{ n8n_subdomain }}.{{ base_domain }}`)"
+      - "traefik.http.routers.n8n.entrypoints=websecure"
+      - "traefik.http.routers.n8n.tls.certresolver=myresolver"
+{% else %}
+      - "traefik.http.routers.n8n.rule=Host(`{{ n8n_subdomain }}.{{ base_domain }}`)"
+      - "traefik.http.routers.n8n.entrypoints=web"
+{% endif %}
+      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+<% endif %>
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:5678/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+<% endif %>
+<% if enable_pihole %>
+  # ── Pi-hole — DNS & Ad-blocking ──
+  pihole:
+    image: pihole/pihole:{{ pihole_version }}
+    container_name: pihole
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - WEBPASSWORD={{ pihole_web_password }}
+      - TZ=Europe/Paris
+      - DNSMASQ_LISTENING=all
+    volumes:
+      - pihole_data:/etc/pihole
+      - pihole_dnsmasq:/etc/dnsmasq.d
+    ports:
+      - "{{ pihole_dns_port }}:53/tcp"
+      - "{{ pihole_dns_port }}:53/udp"
+    networks:
+      - << variables.get('docker_network', 'web') >>
+<% if enable_traefik %>
+    labels:
+      - "traefik.enable=true"
+{% if enable_https %}
+      - "traefik.http.routers.pihole.rule=Host(`{{ pihole_subdomain }}.{{ base_domain }}`)"
+      - "traefik.http.routers.pihole.entrypoints=websecure"
+      - "traefik.http.routers.pihole.tls.certresolver=myresolver"
+{% else %}
+      - "traefik.http.routers.pihole.rule=Host(`{{ pihole_subdomain }}.{{ base_domain }}`)"
+      - "traefik.http.routers.pihole.entrypoints=web"
+{% endif %}
+      - "traefik.http.services.pihole.loadbalancer.server.port=80"
+<% endif %>
+    healthcheck:
+      test: ["CMD", "dig", "+short", "+norecurse", "+retry=0", "@127.0.0.1", "pi.hole"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+<% endif %>
+<% if enable_adguard_home %>
+  # ── AdGuard Home — DNS & Ad-blocking ──
+  adguard-home:
+    image: adguard/adguardhome:{{ adguard_home_version }}
+    container_name: adguard-home
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - adguard_work:/opt/adguardhome/work
+      - adguard_conf:/opt/adguardhome/conf
+    ports:
+      - "{{ adguard_dns_port }}:53/tcp"
+      - "{{ adguard_dns_port }}:53/udp"
+<% if enable_traefik %>
+      - "127.0.0.1:3001:3000"
+<% else %>
+      - "3001:3000"
+<% endif %>
+    networks:
+      - << variables.get('docker_network', 'web') >>
+<% if enable_traefik %>
+    labels:
+      - "traefik.enable=true"
+{% if enable_https %}
+      - "traefik.http.routers.adguard.rule=Host(`{{ adguard_subdomain }}.{{ base_domain }}`)"
+      - "traefik.http.routers.adguard.entrypoints=websecure"
+      - "traefik.http.routers.adguard.tls.certresolver=myresolver"
+{% else %}
+      - "traefik.http.routers.adguard.rule=Host(`{{ adguard_subdomain }}.{{ base_domain }}`)"
+      - "traefik.http.routers.adguard.entrypoints=web"
+{% endif %}
+      - "traefik.http.services.adguard.loadbalancer.server.port=3000"
+<% endif %>
+
+<% endif %>
+# ── Réseau partagé ──
+networks:
+  << variables.get('docker_network', 'web') >>:
+    driver: bridge
+
+# ── Volumes persistants ──
+volumes:
+<% if enable_crowdsec %>
+  crowdsec_config:
+  crowdsec_data:
+<% endif %>
+<% if enable_grafana %>
+  grafana_data:
+<% endif %>
+<% if enable_prometheus %>
+  prometheus_data:
+<% endif %>
+<% if enable_vaultwarden %>
+  vaultwarden_data:
+<% endif %>
+<% if enable_uptime_kuma %>
+  uptime_kuma_data:
+<% endif %>
+<% if enable_portainer %>
+  portainer_data:
+<% endif %>
+<% if enable_nextcloud %>
+  nextcloud_data:
+  nextcloud_db_data:
+<% endif %>
+<% if enable_n8n %>
+  n8n_data:
+<% endif %>
+<% if enable_pihole %>
+  pihole_data:
+  pihole_dnsmasq:
+<% endif %>
+<% if enable_adguard_home %>
+  adguard_work:
+  adguard_conf:
+<% endif %>

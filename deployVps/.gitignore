@@ -1,0 +1,12 @@
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Ansible
+*.retry
+
+# Secrets — NE JAMAIS COMMIT des fichiers non chiffrés contenant des secrets
+# Utiliser ansible-vault pour chiffrer group_vars/all.yml avant de commit

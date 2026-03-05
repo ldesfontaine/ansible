@@ -1,0 +1,36 @@
+# ============================================================================
+# NetBird VPN — Installation et configuration
+# Crée un réseau VPN mesh pour accéder au serveur de manière sécurisée
+# Doc : https://docs.netbird.io/
+# ============================================================================
+
+# --- Installation depuis le dépôt officiel ---
+- name: Add NetBird repository and install
+  shell: |
+    curl -fsSL https://pkgs.netbird.io/install.sh | sh
+  args:
+    creates: /usr/bin/netbird
+
+# --- Authentification avec la setup key ---
+- name: Connect NetBird with setup key
+  shell: netbird up --setup-key {{ netbird_setup_key }}
+  when: netbird_setup_key | length > 0
+  register: netbird_up_result
+  changed_when: "'connected' in netbird_up_result.stdout | default('')"
+  failed_when: false
+
+- name: Enable and start NetBird service
+  systemd:
+    name: netbird
+    state: started
+    enabled: yes
+
+# --- Vérification ---
+- name: Check NetBird status
+  shell: netbird status
+  register: netbird_status
+  changed_when: false
+
+- name: Display NetBird status
+  debug:
+    var: netbird_status.stdout_lines

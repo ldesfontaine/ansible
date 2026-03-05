@@ -1,0 +1,54 @@
+<# traefik.yml.j2 — Généré par Ansible Stack Builder #>
+# ============================================================================
+# Traefik — Configuration statique
+# Managed by Ansible
+# ============================================================================
+
+api:
+  dashboard: false
+
+ping: {}
+
+entryPoints:
+  web:
+    address: ":80"
+{% if enable_https %}
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+  websecure:
+    address: ":443"
+    http:
+      middlewares:
+        - security-headers@file
+{% else %}
+    http:
+      middlewares:
+        - security-headers@file
+{% endif %}
+  metrics:
+    address: ":8082"
+
+metrics:
+  prometheus:
+    entryPoint: metrics
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+  file:
+    directory: /etc/traefik/dynamic
+    watch: true
+
+{% if enable_https %}
+certificatesResolvers:
+  myresolver:
+    acme:
+      email: {{ admin_email }}
+      storage: letsencrypt/acme.json
+      httpChallenge:
+        entryPoint: web
+{% endif %}

@@ -1,0 +1,125 @@
+<# tasks/system.yml — Généré par Ansible Stack Builder #>
+# ============================================================================
+# Système — Mise à jour, outils de base, firewall, mises à jour automatiques
+# ============================================================================
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Upgrade all packages to latest
+  apt:
+    upgrade: safe
+
+- name: Install base tools
+  apt:
+    name:
+      - curl
+<% if enable_ufw %>
+      - ufw
+<% endif %>
+      - python3-pip
+      - git
+<% if enable_crowdsec_bouncer %>
+      - nftables
+<% endif %>
+      - gnupg
+<% if enable_unattended_upgrades %>
+      - unattended-upgrades
+      - apt-listchanges
+<% endif %>
+    state: present
+
+<% if enable_git %>
+- name: Configure Git user.name
+  git_config:
+    name: user.name
+    scope: global
+    value: "{{ git_user_name }}"
+  become_user: "{{ ansible_user }}"
+  when: git_user_name | default('') | length > 0
+
+- name: Configure Git user.email
+  git_config:
+    name: user.email
+    scope: global
+    value: "{{ git_user_email }}"
+  become_user: "{{ ansible_user }}"
+  when: git_user_email | default('') | length > 0
+
+<% endif %>
+<% if enable_unattended_upgrades %>
+# --- Mises à jour automatiques de sécurité ---
+- name: Enable unattended-upgrades
+  copy:
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+      APT::Periodic::AutocleanInterval "7";
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    mode: '0644'
+
+- name: Configure unattended-upgrades sources
+  copy:
+    content: |
+      Unattended-Upgrade::Allowed-Origins {
+        "${distro_id}:${distro_codename}";
+        "${distro_id}:${distro_codename}-security";
+        "${distro_id}ESMApps:${distro_codename}-apps-security";
+        "${distro_id}ESM:${distro_codename}-infra-security";
+<% if enable_docker %>
+        "Docker:${distro_codename}";
+<% endif %>
+      };
+      Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
+      Unattended-Upgrade::Remove-Unused-Dependencies "true";
+      Unattended-Upgrade::Automatic-Reboot "false";
+    dest: /etc/apt/apt.conf.d/50unattended-upgrades
+    mode: '0644'
+
+<% endif %>
+<% if enable_ufw %>
+# --- Firewall UFW ---
+- name: UFW - Allow SSH
+  ufw:
+    rule: allow
+    port: "{{ ssh_port }}"
+    proto: tcp
+
+<% for port_def in ufw_ports %>
+- name: UFW - Allow port << port_def['port'] >>/<< port_def['proto'] >>
+  ufw:
+    rule: allow
+    port: "<< port_def['port'] >>"
+    proto: << port_def['proto'] >>
+<% if port_def['port'] == '443' %>
+  when: enable_https
+<% endif %>
+
+<% endfor %>
+<% if enable_netbird %>
+- name: UFW - Restrict SSH to VPN only
+  ufw:
+    rule: allow
+    port: "{{ ssh_port }}"
+    proto: tcp
+    from_ip: "{{ netbird_vpn_network }}"
+  when: enable_netbird and restrict_ssh_to_vpn
+
+- name: UFW - Remove open SSH rule (VPN restriction active)
+  ufw:
+    rule: allow
+    port: "{{ ssh_port }}"
+    proto: tcp
+    delete: yes
+    from_ip: any
+  when: enable_netbird and restrict_ssh_to_vpn
+  ignore_errors: yes
+
+<% endif %>
+- name: UFW - Enable with deny-all policy
+  ufw:
+    state: enabled
+    policy: deny
+<% endif %>

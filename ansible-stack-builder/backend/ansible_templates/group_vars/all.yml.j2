@@ -1,0 +1,161 @@
+<# group_vars/all.yml — Généré par Ansible Stack Builder #>
+# ============================================================================
+# Variables globales — À PERSONNALISER avant le premier déploiement
+# Générer les secrets : openssl rand -hex 16
+# Pour chiffrer ce fichier : ansible-vault encrypt group_vars/all.yml
+# Généré par Ansible Stack Builder
+# ============================================================================
+
+# --- Identité du serveur ---
+admin_email: "<< variables.get('admin_email', 'your-email@example.com') >>"
+base_domain: "<< variables.get('base_domain', 'example.com') >>"
+
+# --- Mode de déploiement ---
+enable_https: << 'true' if variables.get('enable_https') else 'false' >>
+
+# --- SSH ---
+ssh_port: << variables.get('ssh_port', 22) >>
+<% if enable_ssh_hardening %>
+ssh_max_auth_tries: << variables.get('ssh_max_auth_tries', 3) >>
+ssh_max_sessions: 5
+ssh_client_alive_interval: 300
+ssh_client_alive_count_max: 2
+<% endif %>
+
+<% if enable_docker %>
+# --- Docker ---
+docker_network: "<< variables.get('docker_network', 'web') >>"
+
+# --- Chemins ---
+stack_dir: "<< variables.get('stack_dir', '/opt/stack') >>"
+
+# --- Versions ---
+<% if enable_traefik %>
+traefik_version: "<< versions.get('traefik', '3.4') >>"
+<% endif %>
+<% if enable_crowdsec %>
+crowdsec_version: "<< versions.get('crowdsec', 'v1.6.8') >>"
+<% endif %>
+<% if enable_grafana %>
+grafana_version: "<< versions.get('grafana', '11.5.2') >>"
+<% endif %>
+<% if enable_prometheus %>
+prometheus_version: "<< versions.get('prometheus', 'v3.2.1') >>"
+<% endif %>
+<% if enable_node_exporter %>
+node_exporter_version: "<< versions.get('node_exporter', 'v1.9.0') >>"
+<% endif %>
+<% if enable_vaultwarden %>
+vaultwarden_version: "<< versions.get('vaultwarden', '1.32.7') >>"
+<% endif %>
+<% if enable_uptime_kuma %>
+uptime_kuma_version: "<< versions.get('uptime_kuma', '1') >>"
+<% endif %>
+<% if enable_portainer %>
+portainer_version: "<< versions.get('portainer', '2.25.1-alpine') >>"
+<% endif %>
+<% if enable_nextcloud %>
+nextcloud_version: "<< versions.get('nextcloud', '29') >>"
+<% endif %>
+<% if enable_n8n %>
+n8n_version: "<< versions.get('n8n', '1.77.0') >>"
+<% endif %>
+<% if enable_pihole %>
+pihole_version: "<< versions.get('pihole', '2025.02.1') >>"
+<% endif %>
+<% if enable_adguard_home %>
+adguard_home_version: "<< versions.get('adguard_home', 'v0.107.46') >>"
+<% endif %>
+<% endif %>
+
+<% if enable_git %>
+# --- Git ---
+git_user_name: "<< variables.get('git_user_name', '') >>"
+git_user_email: "<< variables.get('git_user_email', '') >>"
+<% endif %>
+
+# --- Secrets (À CHANGER IMPÉRATIVEMENT) ---
+<% if enable_crowdsec %>
+crowdsec_lapi_key: "<< variables.get('crowdsec_lapi_key', 'CHANGE_ME') >>"
+<% endif %>
+<% if enable_grafana %>
+grafana_admin_password: "<< variables.get('grafana_admin_password', 'CHANGE_ME') >>"
+<% endif %>
+<% if enable_vaultwarden %>
+# ⚠️ Passer à true uniquement pour créer vos comptes, puis repasser à false
+vaultwarden_signups_allowed: << 'true' if variables.get('vaultwarden_signups_allowed') else 'false' >>
+<% endif %>
+<% if enable_nextcloud %>
+nextcloud_admin_user: "<< variables.get('nextcloud_admin_user', 'admin') >>"
+nextcloud_admin_password: "<< variables.get('nextcloud_admin_password', 'CHANGE_ME') >>"
+nextcloud_db_password: "<< variables.get('nextcloud_db_password', 'CHANGE_ME') >>"
+nextcloud_db_root_password: "<< variables.get('nextcloud_db_root_password', 'CHANGE_ME') >>"
+<% endif %>
+<% if enable_n8n %>
+n8n_basic_auth_user: "<< variables.get('n8n_basic_auth_user', 'admin') >>"
+n8n_basic_auth_password: "<< variables.get('n8n_basic_auth_password', 'CHANGE_ME') >>"
+<% endif %>
+<% if enable_pihole %>
+pihole_web_password: "<< variables.get('pihole_web_password', 'CHANGE_ME') >>"
+<% endif %>
+
+# --- Sous-domaines des services ---
+<% if enable_bentopdf %>
+bentopdf_subdomain: "<< variables.get('bentopdf_subdomain', 'pdf') >>"
+<% endif %>
+<% if enable_grafana %>
+grafana_subdomain: "<< variables.get('grafana_subdomain', 'dashboard') >>"
+<% endif %>
+<% if enable_vaultwarden %>
+vaultwarden_subdomain: "<< variables.get('vaultwarden_subdomain', 'vault') >>"
+<% endif %>
+<% if enable_uptime_kuma %>
+uptime_kuma_subdomain: "<< variables.get('uptime_kuma_subdomain', 'status') >>"
+<% endif %>
+<% if enable_portainer %>
+portainer_subdomain: "<< variables.get('portainer_subdomain', 'portainer') >>"
+<% endif %>
+<% if enable_nextcloud %>
+nextcloud_subdomain: "<< variables.get('nextcloud_subdomain', 'cloud') >>"
+<% endif %>
+<% if enable_n8n %>
+n8n_subdomain: "<< variables.get('n8n_subdomain', 'n8n') >>"
+<% endif %>
+<% if enable_pihole %>
+pihole_subdomain: "<< variables.get('pihole_subdomain', 'pihole') >>"
+pihole_dns_port: << variables.get('pihole_dns_port', 53) >>
+<% endif %>
+<% if enable_adguard_home %>
+adguard_subdomain: "<< variables.get('adguard_subdomain', 'adguard') >>"
+adguard_dns_port: << variables.get('adguard_dns_port', 53) >>
+<% endif %>
+
+<% if enable_prometheus %>
+# --- Monitoring ---
+prometheus_retention: "<< variables.get('prometheus_retention', '30d') >>"
+prometheus_retention_size: "<< variables.get('prometheus_retention_size', '1GB') >>"
+prometheus_scrape_interval: "<< variables.get('prometheus_scrape_interval', '15s') >>"
+<% endif %>
+
+<% if enable_crowdsec_bouncer %>
+# --- CrowdSec Bouncer ---
+bouncer_update_frequency: "<< variables.get('bouncer_update_frequency', '10s') >>"
+bouncer_deny_action: "<< variables.get('bouncer_deny_action', 'DROP') >>"
+bouncer_log_level: "<< variables.get('bouncer_log_level', 'info') >>"
+<% endif %>
+
+# --- Services optionnels ---
+<% if enable_bentopdf %>
+enable_bentopdf: true
+<% endif %>
+<% if enable_node_exporter %>
+enable_node_exporter: true
+<% endif %>
+
+<% if enable_netbird %>
+# --- VPN NetBird ---
+enable_netbird: true
+netbird_setup_key: "<< variables.get('netbird_setup_key', '') >>"
+restrict_ssh_to_vpn: << 'true' if variables.get('restrict_ssh_to_vpn') else 'false' >>
+netbird_vpn_network: "<< variables.get('netbird_vpn_network', '100.64.0.0/10') >>"
+<% endif %>

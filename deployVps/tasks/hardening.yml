@@ -1,0 +1,78 @@
+# ============================================================================
+# Hardening — Durcissement SSH, paramètres kernel, protocoles réseau
+# ============================================================================
+
+# --- SSH ---
+# Déploie une configuration SSH sécurisée :
+# - Authentification par clé uniquement (pas de mot de passe)
+# - Root interdit, 3 tentatives max, ciphers modernes
+# - validate : vérifie la syntaxe AVANT d'écraser le fichier (évite un lockout)
+- name: Deploy hardened sshd_config
+  template:
+    src: templates/sshd_config.j2
+    dest: /etc/ssh/sshd_config
+    owner: root
+    group: root
+    mode: '0600'
+    validate: '/usr/sbin/sshd -t -f %s'
+  notify: Restart SSH
+
+- name: Ensure SSH is enabled
+  systemd:
+    name: sshd
+    state: started
+    enabled: yes
+
+# --- Kernel ---
+# Paramètres sysctl pour réduire la surface d'attaque réseau
+- name: Configure kernel security parameters (sysctl)
+  copy:
+    content: |
+      # --- Anti-spoofing ---
+      # Vérifie que les paquets arrivent bien par l'interface attendue
+      net.ipv4.conf.all.rp_filter = 1
+      net.ipv4.conf.default.rp_filter = 1
+
+      # --- Anti-ICMP ---
+      # Ignore les requêtes broadcast ICMP (attaque smurf)
+      net.ipv4.icmp_echo_ignore_broadcasts = 1
+
+      # --- Routage ---
+      # Refuse les paquets avec source routing (usurpation de route)
+      net.ipv4.conf.all.accept_source_route = 0
+      net.ipv6.conf.all.accept_source_route = 0
+      # N'envoie pas de redirections ICMP (on n'est pas un routeur)
+      net.ipv4.conf.all.send_redirects = 0
+      net.ipv4.conf.default.send_redirects = 0
+
+      # --- Anti-SYN flood ---
+      # Active les SYN cookies pour résister aux attaques SYN flood
+      net.ipv4.tcp_syncookies = 1
+      net.ipv4.tcp_max_syn_backlog = 2048
+      net.ipv4.tcp_synack_retries = 2
+
+      # --- Logging ---
+      # Log les paquets avec des adresses source impossibles (martians)
+      net.ipv4.conf.all.log_martians = 1
+
+      # --- Anti-redirect ---
+      # Ignore les redirections ICMP (attaque man-in-the-middle)
+      net.ipv4.conf.all.accept_redirects = 0
+      net.ipv6.conf.all.accept_redirects = 0
+      net.ipv4.conf.default.accept_redirects = 0
+      net.ipv6.conf.default.accept_redirects = 0
+    dest: /etc/sysctl.d/90-hardening.conf
+    mode: '0644'
+  notify: Apply sysctl
+
+# --- Protocoles réseau inutiles ---
+# Empêche le chargement de protocoles réseau rarement utilisés et vulnérables
+- name: Disable unused network protocols
+  copy:
+    content: |
+      install dccp /bin/true
+      install sctp /bin/true
+      install rds /bin/true
+      install tipc /bin/true
+    dest: /etc/modprobe.d/disable-protocols.conf
+    mode: '0644'

@@ -1,0 +1,55 @@
+# ============================================================================
+# SSH Hardened Configuration — Managed by Ansible
+# ⚠️ Ne pas modifier manuellement — relancer le playbook pour tout changement
+# ============================================================================
+
+# --- Réseau ---
+Port {{ ssh_port }}
+AddressFamily any
+ListenAddress 0.0.0.0
+ListenAddress ::
+
+# --- Authentification ---
+# Clé publique uniquement — pas de mot de passe, pas de root
+PermitRootLogin no
+MaxAuthTries 3
+MaxSessions 5
+PubkeyAuthentication yes
+PasswordAuthentication no
+PermitEmptyPasswords no
+KbdInteractiveAuthentication no
+UsePAM yes
+AuthenticationMethods publickey
+
+# --- Restriction d'accès ---
+# Seul l'utilisateur de déploiement peut se connecter
+AllowUsers {{ ansible_user }}
+
+# --- Timeouts ---
+# 30s pour se connecter, déconnexion après 10min d'inactivité (300s × 2)
+LoginGraceTime 30
+ClientAliveInterval 300
+ClientAliveCountMax 2
+
+# --- Surface d'attaque ---
+# Désactive tout ce qui n'est pas nécessaire
+X11Forwarding no
+PrintMotd no
+PermitUserEnvironment no
+AllowAgentForwarding yes
+AllowTcpForwarding no
+PermitTunnel no
+
+# --- Logging ---
+# Niveau VERBOSE pour que CrowdSec puisse détecter les tentatives
+SyslogFacility AUTH
+LogLevel VERBOSE
+
+# --- SFTP ---
+Subsystem sftp /usr/lib/openssh/sftp-server
+
+# --- Algorithmes modernes ---
+# Uniquement les ciphers/KEX/MAC les plus sûrs (post-2020)
+KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org
+Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com
+MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com
