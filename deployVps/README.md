@@ -66,6 +66,8 @@ grafana_admin_password: "..."       # Un vrai mot de passe
 ansible-playbook -i inventory.ini setup.yml
 ```
 
+> **Minimal install** : si tu ne veux pas de NetBird et souhaites un déploiement épuré (voir [section ci-dessous](#minimal-install)), utilise `setup-minimal.yml` à la place.
+
 ### 4. C'est prêt
 
 | Service       | URL par défaut                        | Variable sous-domaine     |
@@ -134,11 +136,36 @@ Puis : `ansible-playbook -i inventory.ini setup.yml`
 
 ---
 
+## Minimal install
+
+`setup-minimal.yml` est un playbook allégé qui déploie uniquement l'essentiel :
+
+**Inclut :**
+- Système & firewall (UFW, mises à jour auto)
+- Hardening SSH & kernel
+- Docker Engine
+- Stack Docker : **Traefik** (reverse proxy), CrowdSec, Prometheus, Grafana, Node Exporter (`enable_node_exporter`) / BentoPDF (`enable_bentopdf`) en option
+- CrowdSec bouncer nftables (hôte)
+
+**Exclut :**
+- NetBird VPN
+- Tout flux « deploy-app » (pas de clone Git, pas de Caddy, pas de healthchecks d'application, pas de métadonnées/historique de déploiement)
+- Backup et settings
+
+```bash
+ansible-playbook -i inventory.ini setup-minimal.yml
+```
+
+Les mêmes variables que `setup.yml` s'appliquent (`group_vars/all.yml`).
+
+---
+
 ## Structure du projet
 
 ```
 ├── inventory.ini                          # Serveur(s) cible(s)
-├── setup.yml                              # Playbook principal
+├── setup.yml                              # Playbook complet (avec NetBird)
+├── setup-minimal.yml                      # Playbook minimal (sans NetBird ni deploy-app)
 ├── group_vars/
 │   └── all.yml                            # Variables à personnaliser
 ├── tasks/
